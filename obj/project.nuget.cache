@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "dgSpecHash": "jiPz55mnhL8=",
+  "success": true,
+  "projectFilePath": "/home/roger/Documents/KeshaProjects/AppDevProject/SchoolManagementSystem/SchoolManagementSystem/SchoolManagementSystem.csproj",
+  "expectedPackageFiles": [
+    "/home/roger/.nuget/packages/microsoft.aspnetcore.app.internal.assets/10.0.10/microsoft.aspnetcore.app.internal.assets.10.0.10.nupkg.sha512"
+  ],
+  "logs": []
+}
