@@ -13,3 +13,10 @@ obj/
 # OS files
 .DS_Store
 Thumbs.db
+# Project context
+project-context/
+
+# Local agent workflow
+.agents/
+AGENTS.md
+.idea/
