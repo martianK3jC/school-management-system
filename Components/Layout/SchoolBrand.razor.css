@@ -1,0 +1,15 @@
+.school-brand{
+    text-align: center;
+    color: var(--text-on-dark);
+    padding: 2rem 1rem;
+}
+
+.school-brand > h2{
+    font-size: var(--text-xl);
+}
+
+.school-brand > p{
+    font-size: var(--text-sm);
+}
+
+
