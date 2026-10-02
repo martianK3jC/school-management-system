@@ -1,21 +1,27 @@
 ﻿@inherits LayoutComponentBase
 
-<div class="page">
-    <div class="sidebar">
+<div class="page relative flex flex-col min-h-screen desktop:grid desktop:grid-cols-[25%_minmax(0,1fr)]">
+    <div class="sidebar bg-odyssey relative 
+            desktop:flex 
+            desktop:flex-col 
+            desktop:sticky 
+            desktop:top-0 
+            desktop:h-screen
+            desktop:min-h-0">
         <SchoolBrand/>
         <NavMenu/>
     </div>
 
-    <main>
-        <div class="top-row">
+    <main class="flex-1 min-w-0">
+        <div class="top-row flex items-center justify-between flex-wrap gap-3 min-h-16 px-4 py-3 desktop:sticky desktop:top-0 desktop:z-[1] desktop:px-6">
             <span>School Year 2026-2027</span>
-            <div class="user-info">
+            <div class="user-info flex flex-col text-left">
                 <span>Teacher Ana</span>
                 <span>School Administrator</span>
             </div>
         </div>
-        
-        <article class="content px-4">
+
+        <article class="content px-4 py-[1.1rem] desktop:px-6">
             @Body
         </article>
     </main>

@@ -1,0 +1,37 @@
+@import "tailwindcss" source(none);
+@source "../Components";
+
+@theme{
+    --color-butter: #F4D892;
+    --color-moss: #C0B05B;
+    --color-palm: #657652;
+    --color-guava: #F2B6A3;
+    --color-sunset: #E89C73;
+    --color-sangria: #E36559;
+    --color-seabreeze: #E5E9EB;
+    --color-lagoon: #94BEBB;
+    --color-odyssey: #23617E;
+}
+
+@custom-variant desktop{
+    @media (min-width: 641px){
+        @slot;
+    }
+}
+
+
+@layer base {
+    html,
+    body {
+        font-family: var(--font-ui);
+        @apply bg-[var(--bg-main)] text-[color:var(--text-body)];
+    }
+
+    a {
+        @apply text-odyssey;
+    }
+
+    a:hover {
+        color: var(--text-link-hover);
+    }
+}

@@ -20,3 +20,5 @@ project-context/
 .agents/
 AGENTS.md
 .idea/
+
+node_modules/
