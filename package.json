@@ -1,0 +1,24 @@
+{
+  "private": true,
+  "name": "schoolmanagementsystem",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "css:build": "npx @tailwindcss/cli -i ./Styles/tailwind.css -o ./wwwroot/tailwind.css --minify",
+    "css:watch": "npx @tailwindcss/cli -i ./Styles/tailwind.css -o ./wwwroot/tailwind.css --watch"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github-kesha:martianK3jC/school-management-system.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.3.3",
+    "tailwindcss": "^4.3.3"
+  }
+}

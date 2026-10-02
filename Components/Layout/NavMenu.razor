@@ -1,24 +1,29 @@
-﻿<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+﻿<input type="checkbox"
+       title="Navigation menu"
+       class="navbar-toggler peer block desktop:hidden" />
 
-<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
-    <nav class="nav flex-column">
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All"> 
+<div class="nav-scrollable hidden peer-checked:block desktop:block desktop:flex-1 desktop:min-h-0 desktop:overflow-y-auto"
+     onclick="document.querySelector('.navbar-toggler').click()">
+    <nav class="school-nav flex flex-col gap-2 p-4">
+        <div class="min-w-0">
+            <NavLink class="menu-link flex items-center justify-center w-full min-h-14 px-4 py-3 text-[length:var(--text-lg)] no-underline rounded-none [&.active]:bg-white/25 [&:hover:not(.active)]:bg-white/10 focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-[-3px]"
+                     href="" Match="NavLinkMatch.All">
                 Dashboard
             </NavLink>
         </div>
 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="learners">
+        <div class="min-w-0">
+            <NavLink class="menu-link flex items-center justify-center w-full min-h-14 px-4 py-3 text-[length:var(--text-lg)] no-underline rounded-none [&.active]:bg-white/25 [&:hover:not(.active)]:bg-white/10 focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-[-3px]"
+                     href="learners">
                 Learners
             </NavLink>
         </div>
 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="sections">
+        <div class="min-w-0">
+            <NavLink class="menu-link flex items-center justify-center w-full min-h-14 px-4 py-3 text-[length:var(--text-lg)] no-underline rounded-none [&.active]:bg-white/25 [&:hover:not(.active)]:bg-white/10 focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-[-3px]"
+                     href="sections">
                 Sections
             </NavLink>
         </div>
     </nav>
 </div>
-
