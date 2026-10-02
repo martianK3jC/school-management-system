@@ -1,6 +1,12 @@
 @page "/learners"
+@rendermode InteractiveServer
 
 <PageTitle>Learners</PageTitle>
+
+@{
+    var visibleLearners = GetFilteredLearners();
+    var enrolledLearners = learners.Where(learner => learner.Status == "Enrolled").ToList();
+}
 
 <div class="space-y-6">
     <nav aria-label="Breadcrumb" class="text-sm">
@@ -14,8 +20,12 @@
             <h1 class="text-[length:var(--text-display)] text-[color:var(--text-primary)]">
                 Learners
             </h1>
-            <p>Here's what's happening at your school today.</p>
+            <p>Browse and filter learner records.</p>
+            <p class="mt-2 text-sm text-[color:var(--text-secondary)]">
+                Demonstration using fictional records.
+            </p>
         </div>
+
         <button type="button" disabled
                 class="bg-odyssey px-4 py-3 text-white disabled:opacity-60">
             + Add Learner
@@ -25,49 +35,75 @@
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <section class="bg-lagoon/30 p-5">
             <h2 class="text-base font-semibold">Enrolled Learners</h2>
-            <p class="mt-3 text-3xl font-semibold">428</p>
+            <p class="mt-3 text-3xl font-semibold">@enrolledLearners.Count</p>
         </section>
         <section class="bg-moss/20 p-5">
-            <h2 class="text-base font-semibold">Male</h2>
-            <p class="mt-3 text-3xl font-semibold">218</p>
+            <h2 class="text-base font-semibold">Enrolled Male</h2>
+            <p class="mt-3 text-3xl font-semibold">
+                @enrolledLearners.Count(learner => learner.Sex == "Male")
+            </p>
         </section>
         <section class="bg-guava/30 p-5">
-            <h2 class="text-base font-semibold">Female</h2>
-            <p class="mt-3 text-3xl font-semibold">210</p>
+            <h2 class="text-base font-semibold">Enrolled Female</h2>
+            <p class="mt-3 text-3xl font-semibold">
+                @enrolledLearners.Count(learner => learner.Sex == "Female")
+            </p>
         </section>
         <section class="bg-butter/30 p-5">
             <h2 class="text-base font-semibold">Grade Levels</h2>
-            <p class="mt-3 text-3xl font-semibold">6</p>
+            <p class="mt-3 text-3xl font-semibold">
+                @learners.Select(learner => learner.Grade).Distinct().Count()
+            </p>
         </section>
         <section class="bg-seabreeze p-5">
             <h2 class="text-base font-semibold">Sections</h2>
-            <p class="mt-3 text-3xl font-semibold">16</p>
+            <p class="mt-3 text-3xl font-semibold">
+                @learners.Select(learner => learner.Section).Distinct().Count()
+            </p>
         </section>
     </div>
 
     <div class="flex flex-wrap items-center gap-3">
         <input type="search"
+               @bind="searchText"
+               @bind:event="oninput"
                aria-label="Search learners"
                placeholder="Search by name, LRN, or section..."
                class="min-w-0 flex-1 basis-64 border border-seabreeze bg-white px-3 py-3 focus:outline-2 focus:outline-odyssey" />
 
-        <select aria-label="Grade level"
+        <select @bind="selectedGrade"
+                aria-label="Grade level"
                 class="border border-seabreeze bg-white px-3 py-3">
             <option value="">All Grade Levels</option>
+            @foreach (var grade in learners.Select(learner => learner.Grade).Distinct().OrderBy(grade => grade))
+            {
+                <option value="@grade">@grade</option>
+            }
         </select>
 
-        <select aria-label="Section"
+        <select @bind="selectedSection"
+                aria-label="Section"
                 class="border border-seabreeze bg-white px-3 py-3">
             <option value="">All Sections</option>
+            @foreach (var section in learners.Select(learner => learner.Section).Distinct().OrderBy(section => section))
+            {
+                <option value="@section">@section</option>
+            }
         </select>
 
-        <select aria-label="Status"
+        <select @bind="selectedStatus"
+                aria-label="Status"
                 class="border border-seabreeze bg-white px-3 py-3">
-            <option value="">All Status</option>
+            <option value="">All Statuses</option>
+            @foreach (var status in learners.Select(learner => learner.Status).Distinct().OrderBy(status => status))
+            {
+                <option value="@status">@status</option>
+            }
         </select>
 
-        <button type="button" disabled
-                class="bg-odyssey px-4 py-3 text-white disabled:opacity-60">
+        <button type="button"
+                @onclick="ClearFilters"
+                class="bg-odyssey px-4 py-3 text-white hover:bg-odyssey/90 focus-visible:outline-2 focus-visible:outline-odyssey focus-visible:outline-offset-2">
             Clear Filters
         </button>
     </div>
@@ -86,39 +122,92 @@
                 </tr>
             </thead>
             <tbody>
-                @for (var row = 1; row <= 10; row++)
+                @if (visibleLearners.Count == 0)
                 {
-                    <tr class="border-b border-seabreeze">
-                        <td class="px-4 py-3">@row</td>
-                        <td class="px-4 py-3 font-semibold">Learner Name</td>
-                        <td class="px-4 py-3">12345678987</td>
-                        <td class="px-4 py-3">Grade Level</td>
-                        <td class="px-4 py-3">Section</td>
-                        <td class="px-4 py-3">
-                            <span class="bg-lagoon/25 px-2 py-1">Enrolled</span>
-                        </td>
-                        <td class="px-4 py-3 text-xs">
-                            [view] [edit] [more]
+                    <tr>
+                        <td colspan="7" class="px-4 py-8 text-center">
+                            No learners found. Try another search or clear the filters.
                         </td>
                     </tr>
+                }
+                else
+                {
+                    var rowNumber = 0;
+
+                    @foreach (var learner in visibleLearners)
+                    {
+                        rowNumber++;
+
+                        <tr @key="learner.Lrn" class="border-b border-seabreeze">
+                            <td class="px-4 py-3">@rowNumber</td>
+                            <td class="px-4 py-3 font-semibold">@learner.Name</td>
+                            <td class="px-4 py-3">@learner.Lrn</td>
+                            <td class="px-4 py-3">@learner.Grade</td>
+                            <td class="px-4 py-3">@learner.Section</td>
+                            <td class="px-4 py-3">@learner.Status</td>
+                            <td class="px-4 py-3 text-[color:var(--text-muted)]">
+                                Unavailable
+                            </td>
+                        </tr>
+                    }
                 }
             </tbody>
         </table>
     </div>
 
-    <footer class="flex flex-wrap items-center justify-between gap-4 text-sm">
-        <p>Showing 1 - 10 of 428 learners</p>
-        <div class="flex gap-2" aria-label="Pagination preview">
-            <button type="button" disabled
-                    class="border border-seabreeze px-3 py-2">1</button>
-            <button type="button" disabled
-                    class="bg-odyssey px-3 py-2 text-white">2</button>
-            <button type="button" disabled
-                    class="border border-seabreeze px-3 py-2">3</button>
-            <span class="px-3 py-2">…</span>
-            <button type="button" disabled
-                    class="border border-seabreeze px-3 py-2"
-                    aria-label="Next page">→</button>
-        </div>
-    </footer>
+    <p role="status" class="text-sm">
+        Showing @visibleLearners.Count of @learners.Count learner records.
+    </p>
 </div>
+
+@code {
+    private string searchText = "";
+    private string selectedGrade = "";
+    private string selectedSection = "";
+    private string selectedStatus = "";
+
+    private record Learner(
+        string Name,
+        string Lrn,
+        string Sex,
+        string Grade,
+        string Section,
+        string Status);
+
+    private readonly List<Learner> learners = new()
+    {
+        new("Maria Santos", "100000000001", "Female", "Grade 1", "Grade 1 - A", "Enrolled"),
+        new("Juan Reyes", "100000000002", "Male", "Grade 1", "Grade 1 - A", "Enrolled"),
+        new("Ana Cruz", "100000000003", "Female", "Grade 1", "Grade 1 - B", "Enrolled"),
+        new("Luis Garcia", "100000000004", "Male", "Grade 1", "Grade 1 - B", "Transferred"),
+        new("Sofia Ramos", "100000000005", "Female", "Grade 2", "Grade 2 - A", "Enrolled"),
+        new("Carlo Flores", "100000000006", "Male", "Grade 2", "Grade 2 - A", "Enrolled"),
+        new("Isabel Torres", "100000000007", "Female", "Grade 2", "Grade 2 - B", "Transferred"),
+        new("Miguel Perez", "100000000008", "Male", "Grade 2", "Grade 2 - B", "Enrolled"),
+        new("Ella Mendoza", "100000000009", "Female", "Grade 3", "Grade 3 - A", "Enrolled"),
+        new("Paolo Rivera", "100000000010", "Male", "Grade 3", "Grade 3 - A", "Enrolled")
+    };
+
+    private List<Learner> GetFilteredLearners()
+    {
+        var query = searchText.Trim();
+
+        return learners.Where(learner =>
+            (query == "" ||
+             learner.Name.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+             learner.Lrn.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+             learner.Section.Contains(query, StringComparison.OrdinalIgnoreCase)) &&
+            (selectedGrade == "" || learner.Grade == selectedGrade) &&
+            (selectedSection == "" || learner.Section == selectedSection) &&
+            (selectedStatus == "" || learner.Status == selectedStatus)
+        ).ToList();
+    }
+
+    private void ClearFilters()
+    {
+        searchText = "";
+        selectedGrade = "";
+        selectedSection = "";
+        selectedStatus = "";
+    }
+}
