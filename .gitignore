@@ -22,3 +22,8 @@ AGENTS.md
 .idea/
 
 node_modules/
+
+# Reconnect template kept in a local backup for now
+/Components/Layout/ReconnectModal.razor
+/Components/Layout/ReconnectModal.razor.css
+/Components/Layout/ReconnectModal.razor.js
