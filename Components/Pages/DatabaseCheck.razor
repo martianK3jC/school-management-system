@@ -1,0 +1,32 @@
+@page "/database-check"
+@using Microsoft.EntityFrameworkCore
+@using SchoolManagementSystem.Data
+@inject IDbContextFactory<SchoolDbContext> DbFactory
+@inject IWebHostEnvironment HostEnvironment
+
+<PageTitle>Database check</PageTitle>
+
+@if (!HostEnvironment.IsDevelopment())
+{
+    <p>This check is available only in development.</p>
+}
+else
+{
+    <p>@message</p>
+}
+
+@code {
+    private string message = "Checking database connection...";
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!HostEnvironment.IsDevelopment())
+        {
+            return;
+        }
+
+        await using var db = await DbFactory.CreateDbContextAsync();
+        var count = await db.Institutions.AsNoTracking().CountAsync();
+        message = $"Connected. Institutions found: {count}.";
+    }
+}

@@ -23,6 +23,9 @@ AGENTS.md
 
 node_modules/
 
+# Local Supabase setup guide
+/SUPABASE_SETUP.md
+
 # Reconnect template kept in a local backup for now
 /Components/Layout/ReconnectModal.razor
 /Components/Layout/ReconnectModal.razor.css
