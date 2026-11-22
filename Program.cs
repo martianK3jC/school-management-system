@@ -1,6 +1,17 @@
 using SchoolManagementSystem.Components;
+using Microsoft.EntityFrameworkCore;
+using SchoolManagementSystem.Data;
 
 var builder = WebApplication.CreateBuilder(args);
+
+
+var connectionString =
+    builder.Configuration.GetConnectionString("SchoolDatabase")
+    ?? throw new InvalidOperationException(
+        "ConnectionStrings:SchoolDatabase is missing.");
+
+builder.Services.AddDbContextFactory<SchoolDbContext>(options =>
+    options.UseNpgsql(connectionString));
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
