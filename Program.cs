@@ -18,6 +18,7 @@ builder.Services.AddDbContextFactory<SchoolDbContext>(options =>
 // Scoped = one instance per Blazor circuit (user session).
 // LearnerService is stateless and creates its own DbContext per operation
 // via the factory, so scoped lifetime is safe — no shared mutable state.
+builder.Services.AddScoped<SchoolManagementSystem.Modules.Academics.Application.SchoolInfoService>();
 builder.Services.AddScoped<ILearnerService, LearnerService>();
 builder.Services.AddScoped<ISectionService, SectionService>();
 

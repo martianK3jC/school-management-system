@@ -1,23 +1,25 @@
 ﻿@inherits LayoutComponentBase
+@inject SchoolManagementSystem.Modules.Academics.Application.SchoolInfoService SchoolInfoService
+@inject ILogger<MainLayout> Logger
 
 <div class="page relative flex flex-col min-h-screen desktop:grid desktop:grid-cols-[25%_minmax(0,1fr)]">
-    <div class="sidebar bg-odyssey relative 
-            desktop:flex 
-            desktop:flex-col 
-            desktop:sticky 
-            desktop:top-0 
+    <div class="sidebar bg-odyssey relative
+            desktop:flex
+            desktop:flex-col
+            desktop:sticky
+            desktop:top-0
             desktop:h-screen
             desktop:min-h-0">
-        <SchoolBrand/>
+        <SchoolBrand SchoolName="@(schoolInfo?.Name ?? "School Management")"/>
         <NavMenu/>
     </div>
 
     <main class="flex-1 min-w-0">
         <div class="top-row flex items-center justify-between flex-wrap gap-3 min-h-16 px-4 py-3 desktop:sticky desktop:top-0 desktop:z-[1] desktop:px-6">
-            <span>School Year 2026-2027</span>
+            <span>@(schoolInfo?.AcademicYear is { } year ? $"School Year {year}" : "School year not set")</span>
             <div class="user-info flex flex-col text-left">
-                <span>Teacher Ana</span>
-                <span>School Administrator</span>
+                <span>School Office</span>
+                <span>Administration</span>
             </div>
         </div>
 
@@ -32,3 +34,12 @@
     <a href="." class="reload">Reload</a>
     <span class="dismiss">🗙</span>
 </div>
+
+@code {
+    private SchoolManagementSystem.Modules.Academics.Application.SchoolInfo? schoolInfo;
+    protected override async Task OnInitializedAsync()
+    {
+        try { schoolInfo = await SchoolInfoService.GetAsync(Guid.Parse("00000000-0000-0000-0000-000000000001")); }
+        catch (Exception ex) { Logger.LogError(ex, "Failed to load school information"); }
+    }
+}
