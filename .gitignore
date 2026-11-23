@@ -30,3 +30,6 @@ node_modules/
 /Components/Layout/ReconnectModal.razor
 /Components/Layout/ReconnectModal.razor.css
 /Components/Layout/ReconnectModal.razor.js
+
+# Local learning workspace
+/learning/
