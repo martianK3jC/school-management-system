@@ -1,5 +1,7 @@
+@implements IDisposable
 @page "/learners"
 @rendermode InteractiveServer
+@inject ILogger<Learners> Logger
 @inject ILearnerService LearnerService
 @inject ISectionService SectionService
 @using System.ComponentModel.DataAnnotations
@@ -23,7 +25,7 @@
         </div>
 
         <button type="button"
-                @onclick="OpenAddModal"
+                @onclick="OpenAddModal" disabled="@isOpeningForm"
                 class="bg-odyssey px-4 py-3 text-white hover:bg-odyssey/90 focus-visible:outline-2 focus-visible:outline-odyssey focus-visible:outline-offset-2">
             + Add Learner
         </button>
@@ -67,7 +69,7 @@
                    class="min-w-0 flex-1 basis-64 border border-seabreeze bg-white px-3 py-3 focus:outline-2 focus:outline-odyssey" />
 
             <select @bind="selectedGradeLevelId"
-                    @bind:after="LoadDataAsync"
+                    @bind:after="FilterChanged"
                     aria-label="Grade level"
                     class="border border-seabreeze bg-white px-3 py-3">
                 <option value="">All Grade Levels</option>
@@ -78,18 +80,18 @@
             </select>
 
             <select @bind="selectedSection"
-                    @bind:after="LoadDataAsync"
+                    @bind:after="FilterChanged"
                     aria-label="Section"
                     class="border border-seabreeze bg-white px-3 py-3">
                 <option value="">All Sections</option>
                 @foreach (var option in sectionOptions)
                 {
-                    <option value="@option.Name">@option.DisplayName</option>
+                    <option value="@option.Id">@option.DisplayName</option>
                 }
             </select>
 
             <select @bind="selectedStatus"
-                    @bind:after="LoadDataAsync"
+                    @bind:after="FilterChanged"
                     aria-label="Status"
                     class="border border-seabreeze bg-white px-3 py-3">
                 <option value="">All Statuses</option>
@@ -107,7 +109,7 @@
         </div>
 
         <div class="overflow-x-auto border border-seabreeze bg-white">
-            <table class="w-full min-w-[800px] text-left text-sm">
+            <table class="learner-table w-full min-w-[800px] text-left text-sm">
                 <thead class="bg-seabreeze">
                     <tr>
                         <th scope="col" class="px-4 py-3">#</th>
@@ -131,7 +133,7 @@
                     }
                     else
                     {
-                        var rowNumber = 0;
+                        var rowNumber = (result.Page - 1) * result.PageSize;
 
                         @foreach (var learner in result.Items)
                         {
@@ -140,14 +142,14 @@
                             <tr @key="learner.Id" class="border-b border-seabreeze">
                                 <td class="px-4 py-3">@rowNumber</td>
                                 <td class="px-4 py-3 font-semibold">@learner.FullName</td>
-                                <td class="px-4 py-3">@learner.Lrn</td>
+                                <td class="px-4 py-3 break-all" title="@learner.Lrn">@learner.Lrn</td>
                                 <td class="px-4 py-3">@learner.Sex</td>
                                 <td class="px-4 py-3">@learner.GradeLevelName</td>
                                 <td class="px-4 py-3">@learner.SectionName</td>
                                 <td class="px-4 py-3">@learner.Status</td>
-                                <td class="flex gap-2 px-4 py-3">
+                                <td class="px-4 py-3"><div class="flex gap-2">
                                     <button type="button"
-                                            @onclick="() => OpenEditModal(learner.Id)"
+                                            @onclick="() => OpenEditModal(learner.Id)" disabled="@isOpeningForm"
                                             class="text-odyssey hover:underline">
                                         Edit
                                     </button>
@@ -156,7 +158,7 @@
                                             class="text-sangria hover:underline">
                                         Delete
                                     </button>
-                                </td>
+                                </div></td>
                             </tr>
                         }
                     }
@@ -165,20 +167,23 @@
         </div>
 
         <p role="status" class="text-sm">
-            Showing @result.TotalCount of @result.TotalCount learner records.
+            Showing @result.Items.Count of @result.FilteredCount matching learner records (@result.TotalCount total).
+            Page @result.Page of @Math.Max(1, (int)Math.Ceiling(result.FilteredCount / (double)result.PageSize)).
+            <button type="button" class="ml-3 underline" disabled="@(result.Page <= 1)" @onclick="PreviousPage">Previous</button>
+            <button type="button" class="ml-3 underline" disabled="@(result.Page * result.PageSize >= result.FilteredCount)" @onclick="NextPage">Next</button>
         </p>
     }
 
     @if (!string.IsNullOrEmpty(errorMessage))
     {
-        <div class="border border-sangria/30 bg-sangria/10 p-4 text-sangria">
+        <div role="alert" class="border border-sangria/30 bg-sangria/10 p-4 text-sangria">
             @errorMessage
         </div>
     }
 
     @if (!string.IsNullOrEmpty(successMessage))
     {
-        <div class="border border-palm/30 bg-palm/10 p-4 text-palm">
+        <div role="status" class="border border-palm/30 bg-palm/10 p-4 text-palm">
             @successMessage
         </div>
     }
@@ -186,44 +191,56 @@
 
 @if (showFormModal)
 {
-    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" @onclick="CloseModal">
+    <dialog class="modal-shell" data-school-modal aria-labelledby="form-title" @onclick="CloseModal">
         <div class="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-white p-6 shadow-xl"
              @onclick:stopPropagation>
-            <h2 class="mb-4 text-xl font-semibold">
+            <h2 id="form-title" class="mb-4 text-xl font-semibold">
                 @(isEditMode ? "Edit Learner" : "Add Learner")
             </h2>
+
+            @if (!string.IsNullOrEmpty(previousSectionName) && formModel.SectionId is null)
+            {
+                <p role="status" class="mb-4 bg-butter/30 p-3">
+                    Please confirm this learner's section. Their previous section was <strong>@previousSectionName</strong>.
+                    Choose a section below, or leave it blank to remove the previous assignment.
+                </p>
+            }
 
             <EditForm Model="formModel" OnValidSubmit="HandleFormSubmit">
                 <DataAnnotationsValidator />
                 <ValidationSummary class="mb-4 text-sm text-sangria" />
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <p role="alert" class="mb-4 text-sangria">@errorMessage</p>
+                }
 
                 <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div>
-                        <label class="mb-1 block text-sm font-medium">First Name *</label>
-                        <InputText @bind-Value="formModel.FirstName"
+                        <label for="formModel-FirstName" class="mb-1 block text-sm font-medium">First Name *</label>
+                        <InputText id="formModel-FirstName" @bind-Value="formModel.FirstName"
                                    class="w-full border border-seabreeze px-3 py-2 focus:outline-2 focus:outline-odyssey" />
                         <ValidationMessage For="() => formModel.FirstName" />
                     </div>
                     <div>
-                        <label class="mb-1 block text-sm font-medium">Middle Name</label>
-                        <InputText @bind-Value="formModel.MiddleName"
+                        <label for="formModel-MiddleName" class="mb-1 block text-sm font-medium">Middle Name</label>
+                        <InputText id="formModel-MiddleName" @bind-Value="formModel.MiddleName"
                                    class="w-full border border-seabreeze px-3 py-2 focus:outline-2 focus:outline-odyssey" />
                     </div>
                     <div>
-                        <label class="mb-1 block text-sm font-medium">Last Name *</label>
-                        <InputText @bind-Value="formModel.LastName"
+                        <label for="formModel-LastName" class="mb-1 block text-sm font-medium">Last Name *</label>
+                        <InputText id="formModel-LastName" @bind-Value="formModel.LastName"
                                    class="w-full border border-seabreeze px-3 py-2 focus:outline-2 focus:outline-odyssey" />
                         <ValidationMessage For="() => formModel.LastName" />
                     </div>
                     <div>
-                        <label class="mb-1 block text-sm font-medium">LRN *</label>
-                        <InputText @bind-Value="formModel.Lrn"
+                        <label for="formModel-Lrn" class="mb-1 block text-sm font-medium">LRN *</label>
+                        <InputText id="formModel-Lrn" @bind-Value="formModel.Lrn" inputmode="numeric" maxlength="12"
                                    class="w-full border border-seabreeze px-3 py-2 focus:outline-2 focus:outline-odyssey" />
                         <ValidationMessage For="() => formModel.Lrn" />
                     </div>
                     <div>
-                        <label class="mb-1 block text-sm font-medium">Sex *</label>
-                        <InputSelect @bind-Value="formModel.Sex"
+                        <label for="formModel-Sex" class="mb-1 block text-sm font-medium">Sex *</label>
+                        <InputSelect id="formModel-Sex" @bind-Value="formModel.Sex"
                                      class="w-full border border-seabreeze px-3 py-2 focus:outline-2 focus:outline-odyssey">
                             <option value="">Select...</option>
                             <option value="Male">Male</option>
@@ -232,14 +249,14 @@
                         <ValidationMessage For="() => formModel.Sex" />
                     </div>
                     <div>
-                        <label class="mb-1 block text-sm font-medium">Birth Date *</label>
-                        <InputDate @bind-Value="formModel.BirthDate"
+                        <label for="formModel-BirthDate" class="mb-1 block text-sm font-medium">Birth Date *</label>
+                        <InputDate id="formModel-BirthDate" @bind-Value="formModel.BirthDate"
                                    class="w-full border border-seabreeze px-3 py-2 focus:outline-2 focus:outline-odyssey" />
                         <ValidationMessage For="() => formModel.BirthDate" />
                     </div>
                     <div>
-                        <label class="mb-1 block text-sm font-medium">Grade Level *</label>
-                        <select @bind="formModel.GradeLevelId"
+                        <label for="formModel-GradeLevelId" class="mb-1 block text-sm font-medium">Grade Level *</label>
+                        <select id="formModel-GradeLevelId" @bind="formModel.GradeLevelId" @bind:after="FormGradeChanged"
                                 class="w-full border border-seabreeze px-3 py-2 focus:outline-2 focus:outline-odyssey">
                             <option value="@Guid.Empty">Select...</option>
                             @foreach (var gl in gradeLevelOptions)
@@ -253,21 +270,33 @@
                         }
                     </div>
                     <div>
-                        <label class="mb-1 block text-sm font-medium">Section</label>
-                        <select @bind="formModel.SectionName"
+                        <label for="formModel-SectionId" class="mb-1 block text-sm font-medium">Section</label>
+                        <select id="formModel-SectionId" @bind="formModel.SectionId"
                                 class="w-full border border-seabreeze px-3 py-2 focus:outline-2 focus:outline-odyssey">
                             <option value="">Select a section...</option>
-                            @foreach (var option in sectionOptions)
+                            @foreach (var option in FormSections)
                             {
-                                <option value="@option.Name">@option.DisplayName</option>
+                                <option value="@option.Id">@option.DisplayName</option>
                             }
                         </select>
+                        @if (formModel.GradeLevelId == Guid.Empty)
+                        {
+                            <p class="mt-2 text-sm text-[color:var(--text-secondary)]">Choose a grade level to see its sections.</p>
+                        }
+                        else if (!FormSections.Any())
+                        {
+                            <p class="mt-2 text-sm text-[color:var(--text-secondary)]">
+                                No active sections are available for @gradeLevelOptions.FirstOrDefault(g => g.Id == formModel.GradeLevelId)?.Name.
+                                Create an active section for this grade on the Sections page, then reopen this form.
+                            </p>
+                        }
+
                     </div>
                     @if (isEditMode)
                     {
                         <div>
-                            <label class="mb-1 block text-sm font-medium">Status</label>
-                            <InputSelect @bind-Value="editStatus"
+                            <label for="editStatus" class="mb-1 block text-sm font-medium">Status</label>
+                        <InputSelect id="editStatus" @bind-Value="editStatus"
                                          class="w-full border border-seabreeze px-3 py-2 focus:outline-2 focus:outline-odyssey">
                                 <option value="Enrolled">Enrolled</option>
                                 <option value="Transferred">Transferred</option>
@@ -277,13 +306,13 @@
                         </div>
                     }
                     <div>
-                        <label class="mb-1 block text-sm font-medium">Guardian Name</label>
-                        <InputText @bind-Value="formModel.GuardianName"
+                        <label for="formModel-GuardianName" class="mb-1 block text-sm font-medium">Guardian Name</label>
+                        <InputText id="formModel-GuardianName" @bind-Value="formModel.GuardianName"
                                    class="w-full border border-seabreeze px-3 py-2 focus:outline-2 focus:outline-odyssey" />
                     </div>
                     <div>
-                        <label class="mb-1 block text-sm font-medium">Guardian Contact</label>
-                        <InputText @bind-Value="formModel.GuardianContact"
+                        <label for="formModel-GuardianContact" class="mb-1 block text-sm font-medium">Guardian Contact</label>
+                        <InputText id="formModel-GuardianContact" @bind-Value="formModel.GuardianContact"
                                    class="w-full border border-seabreeze px-3 py-2 focus:outline-2 focus:outline-odyssey" />
                     </div>
                 </div>
@@ -302,15 +331,19 @@
                 </div>
             </EditForm>
         </div>
-    </div>
+    </dialog>
 }
 
 @if (showDeleteConfirm)
 {
-    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" @onclick="CancelDelete">
+    <dialog class="modal-shell" data-school-modal aria-labelledby="delete-title" style="width: 28rem" @onclick="CancelDelete">
         <div class="w-full max-w-md bg-white p-6 shadow-xl" @onclick:stopPropagation>
-            <h2 class="mb-2 text-lg font-semibold text-sangria">Confirm Delete</h2>
+            <h2 id="delete-title" class="mb-2 text-lg font-semibold text-sangria">Confirm Delete</h2>
             <p class="mb-4">Are you sure you want to delete <strong>@deleteTargetName</strong>? This cannot be undone.</p>
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <p role="alert" class="mb-4 text-sangria">@errorMessage</p>
+            }
             <div class="flex justify-end gap-3">
                 <button type="button"
                         @onclick="CancelDelete"
@@ -325,7 +358,7 @@
                 </button>
             </div>
         </div>
-    </div>
+    </dialog>
 }
 
 @code {
@@ -333,19 +366,26 @@
     private List<GradeLevelOption> gradeLevelOptions = [];
     private List<SectionOption> sectionOptions = [];
     private bool isLoading = true;
+    private int loadSequence;
     private bool isSubmitting;
     private string errorMessage = "";
     private string successMessage = "";
 
     private string searchText = "";
     private Guid? selectedGradeLevelId;
-    private string selectedSection = "";
+    private Guid? selectedSection;
+    private int currentPage = 1;
     private string selectedStatus = "";
 
     private CancellationTokenSource? searchCts;
+    public void Dispose() { searchCts?.Cancel(); searchCts?.Dispose(); }
 
     private bool showFormModal;
+    private bool isOpeningForm;
     private bool isEditMode;
+    private SectionOption? inactiveSection;
+    private string previousSectionName = "";
+    private IEnumerable<SectionOption> FormSections => sectionOptions.Concat(inactiveSection is null ? [] : new[] { inactiveSection }).Where(s => s.GradeLevelId == formModel.GradeLevelId);
     private LearnerFormModel formModel = new();
     private string editStatus = "Enrolled";
     private long editVersion;
@@ -359,31 +399,33 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadDropdownsAsync();
         await LoadDataAsync();
+        await LoadDropdownsAsync();
     }
 
-    private async Task LoadDropdownsAsync()
+    private async Task<bool> LoadDropdownsAsync()
     {
         try
         {
             gradeLevelOptions = await LearnerService.GetGradeLevelOptionsAsync(CurrentInstitutionId);
-            // Load real section data from the Sections table instead of a
-            // hardcoded fallback list. New sections created on the Sections
-            // page are immediately available in the learner form dropdown.
+            // Refresh when opening a form as well as on initial page load,
+            // so changes made in another tab appear in the choices.
             sectionOptions = await SectionService.GetSectionOptionsAsync(CurrentInstitutionId, null);
+            return true;
         }
         catch (Exception ex)
         {
-            errorMessage = $"Failed to load dropdown options: {ex.Message}";
+            Logger.LogError(ex, "Failed to load dropdown options");
+            errorMessage = "Failed to load dropdown options. Please try again.";
+            return false;
         }
     }
 
     private async Task LoadDataAsync()
     {
+        var sequence = ++loadSequence;
         isLoading = true;
         errorMessage = "";
-        successMessage = "";
 
         try
         {
@@ -391,26 +433,34 @@
                 InstitutionId: CurrentInstitutionId,
                 SearchText: searchText,
                 GradeLevelId: selectedGradeLevelId,
-                SectionName: string.IsNullOrWhiteSpace(selectedSection) ? null : selectedSection,
-                Status: string.IsNullOrWhiteSpace(selectedStatus) ? null : selectedStatus);
+                SectionName: null,
+                Status: string.IsNullOrWhiteSpace(selectedStatus) ? null : selectedStatus,
+                SectionId: selectedSection, Page: currentPage);
 
-            result = await LearnerService.GetLearnersAsync(filter);
+            var loaded = await LearnerService.GetLearnersAsync(filter);
+            if (sequence != loadSequence) return;
+            result = loaded;
+            currentPage = result.Page;
         }
         catch (Exception ex)
         {
-            errorMessage = $"Failed to load learners: {ex.Message}";
+            if (sequence != loadSequence) return;
+            Logger.LogError(ex, "Failed to load learners");
+            errorMessage = "Failed to load learners. Please try again.";
         }
         finally
         {
-            isLoading = false;
+            if (sequence == loadSequence) isLoading = false;
         }
     }
 
     private async Task OnSearchInput(ChangeEventArgs e)
     {
         searchText = e.Value?.ToString() ?? "";
+        currentPage = 1;
 
         searchCts?.Cancel();
+        searchCts?.Dispose();
         searchCts = new CancellationTokenSource();
         var token = searchCts.Token;
 
@@ -428,38 +478,53 @@
         }
     }
 
+    private async Task PreviousPage() { currentPage--; await LoadDataAsync(); }
+    private async Task NextPage() { currentPage++; await LoadDataAsync(); }
+    private async Task FilterChanged() { currentPage = 1; await LoadDataAsync(); }
+
     private async Task ClearFilters()
     {
         searchText = "";
+        currentPage = 1;
         selectedGradeLevelId = null;
-        selectedSection = "";
+        selectedSection = null;
         selectedStatus = "";
         await LoadDataAsync();
     }
 
-    private void OpenAddModal()
+    private void FormGradeChanged() { formModel.SectionId = null; }
+
+    private async Task OpenAddModal()
     {
-        isEditMode = false;
-        formModel = new LearnerFormModel();
-        editStatus = "Enrolled";
-        editVersion = 0;
-        errorMessage = "";
-        successMessage = "";
-        showFormModal = true;
+        if (isOpeningForm) return;
+        isOpeningForm = true;
+        try
+        {
+            errorMessage = "";
+            successMessage = "";
+            if (!await LoadDropdownsAsync()) return;
+            inactiveSection = null;
+            previousSectionName = "";
+            isEditMode = false;
+            formModel = new LearnerFormModel();
+            editStatus = "Enrolled";
+            editVersion = 0;
+            showFormModal = true;
+        }
+        finally { isOpeningForm = false; }
     }
 
     private async Task OpenEditModal(Guid learnerId)
     {
+        if (isOpeningForm) return;
+        isOpeningForm = true;
         errorMessage = "";
         successMessage = "";
 
         try
         {
-            // Use GetDetailByIdAsync instead of GetByIdAsync so we get guardian
-            // fields, birth date, and the real Version for optimistic concurrency.
-            // The old code used GetByIdAsync which returned LearnerSummary — that
-            // DTO omits these fields, causing the edit form to silently lose
-            // guardian data on save and always send Version=1 (breaking concurrency).
+            if (!await LoadDropdownsAsync()) return;
+            // Editing needs stored name fields and every editable value, not a display summary.
             var detail = await LearnerService.GetDetailByIdAsync(learnerId);
             if (detail is null)
             {
@@ -467,25 +532,21 @@
                 return;
             }
 
-            var parts = detail.FullName.Split(", ", 2);
-            var lastName = parts.Length > 0 ? parts[0] : "";
-            var firstMiddle = parts.Length > 1 ? parts[1] : "";
-            var nameParts = firstMiddle.Split(' ', 2);
-            var firstName = nameParts.Length > 0 ? nameParts[0] : "";
-            var middleName = nameParts.Length > 1 ? nameParts[1] : "";
-
+            previousSectionName = detail.SectionId is null ? detail.SectionName : "";
+            inactiveSection = detail.SectionId is { } sectionId && !sectionOptions.Any(s => s.Id == sectionId)
+                ? new SectionOption(sectionId, detail.SectionName, detail.SectionName + " (current inactive section)", detail.GradeLevelId) : null;
             isEditMode = true;
             formModel = new LearnerFormModel
             {
                 Id = detail.Id,
-                FirstName = firstName,
-                MiddleName = middleName,
-                LastName = lastName,
+                FirstName = detail.FirstName,
+                MiddleName = detail.MiddleName,
+                LastName = detail.LastName,
                 Lrn = detail.Lrn,
                 Sex = detail.Sex,
                 BirthDate = detail.BirthDate,
                 GradeLevelId = detail.GradeLevelId,
-                SectionName = detail.SectionName,
+                SectionId = detail.SectionId,
                 GuardianName = detail.GuardianName,
                 GuardianContact = detail.GuardianContact
             };
@@ -496,18 +557,22 @@
         }
         catch (Exception ex)
         {
-            errorMessage = $"Failed to load learner details: {ex.Message}";
+            Logger.LogError(ex, "Failed to load learner details");
+            errorMessage = "Failed to load learner details. Please try again.";
         }
+        finally { isOpeningForm = false; }
     }
 
     private void CloseModal()
     {
+        if (isSubmitting) return;
         showFormModal = false;
         errorMessage = "";
     }
 
     private async Task HandleFormSubmit()
     {
+        if (isSubmitting) return;
         if (formModel.GradeLevelId == Guid.Empty)
         {
             errorMessage = "Please select a grade level.";
@@ -530,11 +595,11 @@
                     LastName: formModel.LastName,
                     Sex: formModel.Sex,
                     BirthDate: formModel.BirthDate ?? DateOnly.MinValue,
-                    SectionName: formModel.SectionName,
+                    SectionName: "",
                     Status: editStatus,
                     GuardianName: formModel.GuardianName,
                     GuardianContact: formModel.GuardianContact,
-                    Version: editVersion);
+                    Version: editVersion, SectionId: formModel.SectionId);
 
                 await LearnerService.UpdateAsync(request);
                 successMessage = "Learner updated successfully.";
@@ -550,9 +615,9 @@
                     LastName: formModel.LastName,
                     Sex: formModel.Sex,
                     BirthDate: formModel.BirthDate ?? DateOnly.MinValue,
-                    SectionName: formModel.SectionName,
+                    SectionName: "",
                     GuardianName: formModel.GuardianName,
-                    GuardianContact: formModel.GuardianContact);
+                    GuardianContact: formModel.GuardianContact, SectionId: formModel.SectionId);
 
                 await LearnerService.CreateAsync(request);
                 successMessage = "Learner added successfully.";
@@ -562,13 +627,14 @@
             await LoadDataAsync();
             await LoadDropdownsAsync();
         }
-        catch (InvalidOperationException ex)
+        catch (EnrollmentException ex)
         {
             errorMessage = ex.Message;
         }
         catch (Exception ex)
         {
-            errorMessage = $"An unexpected error occurred: {ex.Message}";
+            Logger.LogError(ex, "An unexpected error occurred");
+            errorMessage = "An unexpected error occurred. Please try again.";
         }
         finally
         {
@@ -587,11 +653,13 @@
 
     private void CancelDelete()
     {
+        if (isSubmitting) return;
         showDeleteConfirm = false;
     }
 
     private async Task ExecuteDelete()
     {
+        if (isSubmitting) return;
         isSubmitting = true;
         errorMessage = "";
 
@@ -603,9 +671,14 @@
             await LoadDataAsync();
             await LoadDropdownsAsync();
         }
+        catch (EnrollmentException ex)
+        {
+            errorMessage = ex.Message;
+        }
         catch (Exception ex)
         {
-            errorMessage = $"Failed to delete learner: {ex.Message}";
+            Logger.LogError(ex, "Failed to delete learner");
+            errorMessage = "Failed to delete learner. Please try again.";
         }
         finally
         {
@@ -617,29 +690,36 @@
     {
         public Guid Id { get; set; }
 
+        [StringLength(100)]
         [Required(ErrorMessage = "First name is required.")]
         public string FirstName { get; set; } = "";
 
+        [StringLength(100)]
         public string MiddleName { get; set; } = "";
 
+        [StringLength(100)]
         [Required(ErrorMessage = "Last name is required.")]
         public string LastName { get; set; } = "";
 
+        [RegularExpression(EnrollmentValidation.LrnPattern, ErrorMessage = "LRN must contain exactly 12 digits.")]
         [Required(ErrorMessage = "LRN is required.")]
         public string Lrn { get; set; } = "";
 
         [Required(ErrorMessage = "Sex is required.")]
         public string Sex { get; set; } = "";
 
+        [PastOrToday(ErrorMessage = "Birth date must be no later than today.")]
         [Required(ErrorMessage = "Birth date is required.")]
         public DateOnly? BirthDate { get; set; }
 
         public Guid GradeLevelId { get; set; }
 
-        public string SectionName { get; set; } = "";
+        public Guid? SectionId { get; set; }
 
+        [StringLength(200)]
         public string GuardianName { get; set; } = "";
 
+        [StringLength(50)]
         public string GuardianContact { get; set; } = "";
     }
 }

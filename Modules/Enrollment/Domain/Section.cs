@@ -9,7 +9,7 @@ public class Section
 {
 	public Guid Id { get; set; }
 
-	/// <summary>Multi-tenant scope. Every query filters by this.</summary>
+	/// <summary>School owning this section. List queries filter by this scope; authenticated access control is a future milestone.</summary>
 	public Guid InstitutionId { get; set; }
 
 	/// <summary>Links to the grade level this section belongs to.</summary>

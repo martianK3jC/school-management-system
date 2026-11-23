@@ -5,7 +5,10 @@ public record LearnerFilter(
     string SearchText,
     Guid? GradeLevelId,
     string? SectionName,
-    string? Status);
+    string? Status,
+    Guid? SectionId = null,
+    int Page = 1,
+    int PageSize = 25);
 
 public record LearnerListResult(
     List<LearnerSummary> Items,
@@ -14,7 +17,10 @@ public record LearnerListResult(
     int EnrolledMaleCount,
     int EnrolledFemaleCount,
     int DistinctGradeLevelCount,
-    int DistinctSectionCount);
+    int DistinctSectionCount,
+    int Page = 1,
+    int PageSize = 25,
+    int FilteredCount = 0);
 
 public record LearnerSummary(
     Guid Id,
@@ -36,7 +42,8 @@ public record CreateLearnerRequest(
     DateOnly BirthDate,
     string SectionName,
     string GuardianName,
-    string GuardianContact);
+    string GuardianContact,
+    Guid? SectionId = null);
 
 public record UpdateLearnerRequest(
     Guid Id,
@@ -51,7 +58,8 @@ public record UpdateLearnerRequest(
     string Status,
     string GuardianName,
     string GuardianContact,
-    long Version);
+    long Version,
+    Guid? SectionId = null);
 
 /// <summary>
 /// Full learner detail for the edit form. Includes fields that LearnerSummary
@@ -60,7 +68,9 @@ public record UpdateLearnerRequest(
 /// </summary>
 public record LearnerDetail(
     Guid Id,
-    string FullName,
+    string FirstName,
+    string MiddleName,
+    string LastName,
     string Lrn,
     string Sex,
     DateOnly BirthDate,
@@ -70,7 +80,8 @@ public record LearnerDetail(
     string Status,
     string GuardianName,
     string GuardianContact,
-    long Version);
+    long Version,
+    Guid? SectionId);
 
 /// <summary>
 /// Aggregate statistics for the dashboard. Metrics that require unimplemented
@@ -85,8 +96,8 @@ public record DashboardStats(
     List<RecentActivity> RecentActivities);
 
 /// <summary>
-/// A single row in the dashboard's recent activity feed. Currently sourced from
-/// learner creation events; will expand when an audit log entity is added.
+/// A single row in the dashboard's recent activity feed, derived from learner
+/// records with known CreatedAt values. A complete audit log is future work.
 /// </summary>
 public record RecentActivity(string LearnerName, string Activity, string Timestamp);
 
