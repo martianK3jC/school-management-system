@@ -38,6 +38,17 @@ public class SchoolDbContext(
 
         var learner = modelBuilder.Entity<Learner>();
 
+        // CHECK constraints protect writes outside the UI too. The migration installs
+        // them NOT VALID so existing invalid records can be corrected without data loss.
+        learner.ToTable(t =>
+        {
+            t.HasCheckConstraint("CK_Learners_Lrn", "\"Lrn\" ~ '^[0-9]{12}$'");
+            t.HasCheckConstraint("CK_Learners_Names", "length(btrim(\"FirstName\")) BETWEEN 1 AND 100 AND length(btrim(\"LastName\")) BETWEEN 1 AND 100 AND length(btrim(\"MiddleName\")) <= 100");
+            t.HasCheckConstraint("CK_Learners_Guardian", "length(btrim(\"GuardianName\")) <= 200 AND length(btrim(\"GuardianContact\")) <= 50");
+            t.HasCheckConstraint("CK_Learners_Status", "\"Status\" IN ('Enrolled', 'Transferred', 'Withdrawn', 'Graduated') AND \"Sex\" IN ('Male', 'Female')");
+            t.HasCheckConstraint("CK_Learners_BirthDate", "\"BirthDate\" > DATE '0001-01-01' AND \"BirthDate\" <= CURRENT_DATE");
+        });
+
         learner.HasOne<Institution>()
             .WithMany()
             .HasForeignKey(x => x.InstitutionId)
@@ -48,6 +59,11 @@ public class SchoolDbContext(
             .HasForeignKey(x => x.GradeLevelId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        learner.HasOne(x => x.Section)
+            .WithMany()
+            .HasForeignKey(x => x.SectionId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         learner.HasIndex(x => new { x.InstitutionId, x.Lrn })
             .IsUnique();
 
@@ -55,6 +71,11 @@ public class SchoolDbContext(
             .IsConcurrencyToken();
 
         var section = modelBuilder.Entity<Section>();
+
+        section.ToTable(t =>
+        {
+            t.HasCheckConstraint("CK_Sections_Values", "length(btrim(\"Name\")) BETWEEN 1 AND 100 AND length(btrim(\"AdviserName\")) <= 200 AND length(btrim(\"RoomNumber\")) <= 100 AND \"MaxCapacity\" >= 0 AND \"Status\" IN ('Active', 'Inactive')");
+        });
 
         section.HasOne<Institution>()
             .WithMany()

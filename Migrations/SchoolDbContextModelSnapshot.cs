@@ -195,6 +195,9 @@ namespace SchoolManagementSystem.Migrations
                     b.Property<DateOnly>("BirthDate")
                         .HasColumnType("date");
 
+                    b.Property<DateTimeOffset?>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("FirstName")
                         .IsRequired()
                         .HasColumnType("text");
@@ -225,6 +228,9 @@ namespace SchoolManagementSystem.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<Guid?>("SectionId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("SectionName")
                         .IsRequired()
                         .HasColumnType("text");
@@ -237,6 +243,9 @@ namespace SchoolManagementSystem.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<long>("Version")
                         .IsConcurrencyToken()
                         .HasColumnType("bigint");
@@ -245,10 +254,23 @@ namespace SchoolManagementSystem.Migrations
 
                     b.HasIndex("GradeLevelId");
 
+                    b.HasIndex("SectionId");
+
                     b.HasIndex("InstitutionId", "Lrn")
                         .IsUnique();
 
-                    b.ToTable("Learners", "school");
+                    b.ToTable("Learners", "school", t =>
+                        {
+                            t.HasCheckConstraint("CK_Learners_BirthDate", "\"BirthDate\" > DATE '0001-01-01' AND \"BirthDate\" <= CURRENT_DATE");
+
+                            t.HasCheckConstraint("CK_Learners_Guardian", "length(btrim(\"GuardianName\")) <= 200 AND length(btrim(\"GuardianContact\")) <= 50");
+
+                            t.HasCheckConstraint("CK_Learners_Lrn", "\"Lrn\" ~ '^[0-9]{12}$'");
+
+                            t.HasCheckConstraint("CK_Learners_Names", "length(btrim(\"FirstName\")) BETWEEN 1 AND 100 AND length(btrim(\"LastName\")) BETWEEN 1 AND 100 AND length(btrim(\"MiddleName\")) <= 100");
+
+                            t.HasCheckConstraint("CK_Learners_Status", "\"Status\" IN ('Enrolled', 'Transferred', 'Withdrawn', 'Graduated') AND \"Sex\" IN ('Male', 'Female')");
+                        });
                 });
 
             modelBuilder.Entity("SchoolManagementSystem.Modules.Enrollment.Domain.Section", b =>
@@ -293,7 +315,10 @@ namespace SchoolManagementSystem.Migrations
                     b.HasIndex("InstitutionId", "GradeLevelId", "Name")
                         .IsUnique();
 
-                    b.ToTable("Sections", "school");
+                    b.ToTable("Sections", "school", t =>
+                        {
+                            t.HasCheckConstraint("CK_Sections_Values", "length(btrim(\"Name\")) BETWEEN 1 AND 100 AND length(btrim(\"AdviserName\")) <= 200 AND length(btrim(\"RoomNumber\")) <= 100 AND \"MaxCapacity\" >= 0 AND \"Status\" IN ('Active', 'Inactive')");
+                        });
                 });
 
             modelBuilder.Entity("SchoolManagementSystem.Modules.Academics.Domain.AcademicYear", b =>
@@ -336,6 +361,13 @@ namespace SchoolManagementSystem.Migrations
                         .HasForeignKey("InstitutionId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("SchoolManagementSystem.Modules.Enrollment.Domain.Section", "Section")
+                        .WithMany()
+                        .HasForeignKey("SectionId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Section");
                 });
 
             modelBuilder.Entity("SchoolManagementSystem.Modules.Enrollment.Domain.Section", b =>
