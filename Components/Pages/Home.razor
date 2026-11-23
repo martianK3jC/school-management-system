@@ -1,127 +1,185 @@
-﻿
-@page "/"
+﻿@page "/"
+@rendermode InteractiveServer
+@inject ILogger<Home> Logger
+@inject ILearnerService LearnerService
+@inject ISectionService SectionService
+@using SchoolManagementSystem.Modules.Enrollment.Application
 
 <PageTitle>Dashboard</PageTitle>
 
 <div class="space-y-6">
     <section class="bg-butter/18 p-8">
         <h1 class="text-[length:var(--text-display)] text-[color:var(--text-primary)]">
-            Good morning, Teacher Ana!
+            Good morning!
         </h1>
         <p>Here's what's happening at your school today.</p>
 
-        <div class="mt-12 flex flex-wrap gap-4 text-[length:var(--text-sm)] text-[color:var(--text-secondary)]">
-            <p>School Name</p>
-            <p>School Address</p>
-            <p>School Region</p>
-        </div>
     </section>
 
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <section class="bg-lagoon/30 p-5">
-            <h2 class="text-base font-semibold">Enrolled Learners</h2>
-            <p class="mt-3 text-3xl font-semibold">428</p>
-        </section>
+    @if (isLoading)
+    {
+        <p class="py-8 text-center text-[color:var(--text-muted)]">Loading dashboard...</p>
+    }
+    else if (stats is not null)
+    {
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <section class="bg-lagoon/30 p-5">
+                <h2 class="text-base font-semibold">Enrolled Learners</h2>
+                <p class="mt-3 text-3xl font-semibold">@stats.EnrolledLearners</p>
+            </section>
 
-        <section class="bg-moss/20 p-5">
-            <h2 class="text-base font-semibold">Sections</h2>
-            <p class="mt-3 text-3xl font-semibold">16</p>
-        </section>
+            <section class="bg-moss/20 p-5">
+                <h2 class="text-base font-semibold">Active Sections</h2>
+                <p class="mt-3 text-3xl font-semibold">@stats.TotalSections</p>
+            </section>
 
-        <section class="bg-guava/30 p-5">
-            <h2 class="text-base font-semibold">Teachers</h2>
-            <p class="mt-3 text-3xl font-semibold">428</p>
-        </section>
+            <section class="bg-guava/30 p-5">
+                <h2 class="text-base font-semibold">Teachers</h2>
+                <p class="mt-3 text-3xl font-semibold" title="Requires Teacher entity">—</p>
+            </section>
 
-        <section class="bg-butter/30 p-5">
-            <h2 class="text-base font-semibold">Present Today</h2>
-            <p class="mt-3 text-3xl font-semibold">428</p>
-        </section>
-    </div>
-
-    <div class="grid grid-cols-1 gap-6 xl:grid-cols-2">
-        <section class="border border-seabreeze bg-white p-5">
-            <div class="flex flex-wrap items-center justify-between gap-3">
-                <h2 class="text-lg font-semibold">Today's Attendance</h2>
-                <span class="text-sm text-odyssey">View Details →</span>
-            </div>
-
-            <div class="mt-5 grid grid-cols-3 gap-3">
-                <div class="bg-lagoon/25 p-4">
-                    <p>Present</p>
-                    <p class="text-2xl font-semibold">428</p>
-                </div>
-                <div class="bg-guava/30 p-4">
-                    <p>Absent</p>
-                    <p class="text-2xl font-semibold">18</p>
-                </div>
-                <div class="bg-butter/30 p-4">
-                    <p>Late</p>
-                    <p class="text-2xl font-semibold">5</p>
-                </div>
-            </div>
-        </section>
-
-        <section class="border border-seabreeze bg-white p-5">
-            <div class="flex flex-wrap items-center justify-between gap-3">
-                <h2 class="text-lg font-semibold">Section Overview</h2>
-            <a href="sections" class="text-sm underline">
-                View All Sections →
-            </a>
-            </div>
-
-            <div class="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
-                <div class="bg-lagoon/25 p-4">
-                    <p class="font-semibold">Grade 1 - A</p>
-                    <p>31 learners</p>
-                    <p class="text-sm">Adviser: Ms. Reyes</p>
-                </div>
-                <div class="bg-moss/20 p-4">
-                    <p class="font-semibold">Grade 6 - B</p>
-                    <p>29 learners</p>
-                    <p class="text-sm">Adviser: Mr. Flores</p>
-                </div>
-                <div class="bg-guava/30 p-4">
-                    <p class="font-semibold">Grade 6 - A</p>
-                    <p>34 learners</p>
-                    <p class="text-sm">Adviser: Ms. Santos</p>
-                </div>
-            </div>
-        </section>
-    </div>
-    <section class="border border-seabreeze bg-white p-5">
-        <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <h2 class="text-lg font-semibold">Recent Learner Activity</h2>
-            <span class="text-sm text-odyssey">View All Activity →</span>
+            <section class="bg-butter/30 p-5">
+                <h2 class="text-base font-semibold">Present Today</h2>
+                <p class="mt-3 text-3xl font-semibold" title="Requires Attendance entity">@stats.PresentToday</p>
+            </section>
         </div>
 
-        <div class="overflow-x-auto">
-            <table class="w-full min-w-[540px] text-left text-sm">
-                <thead class="bg-seabreeze">
-                <tr>
-                    <th scope="col" class="px-4 py-3">Learner</th>
-                    <th scope="col" class="px-4 py-3">Activity</th>
-                    <th scope="col" class="px-4 py-3">Date &amp; Time</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr class="border-b border-seabreeze">
-                    <td class="px-4 py-3 font-semibold">Maria Santos</td>
-                    <td class="px-4 py-3">Enrolled in Grade 4 - Mabini</td>
-                    <td class="px-4 py-3">Sep 29, 2026 8:14 AM</td>
-                </tr>
-                <tr class="border-b border-seabreeze">
-                    <td class="px-4 py-3 font-semibold">Maria Santos</td>
-                    <td class="px-4 py-3">Enrolled in Grade 4 - Mabini</td>
-                    <td class="px-4 py-3">Sep 29, 2026 8:14 AM</td>
-                </tr>
-                <tr>
-                    <td class="px-4 py-3 font-semibold">Maria Santos</td>
-                    <td class="px-4 py-3">Enrolled in Grade 4 - Mabini</td>
-                    <td class="px-4 py-3">Sep 29, 2026 8:14 AM</td>
-                </tr>
-                </tbody>
-            </table>
+        <div class="grid grid-cols-1 gap-6 xl:grid-cols-2">
+            <section class="border border-seabreeze bg-white p-5">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <h2 class="text-lg font-semibold">Today's Attendance</h2>
+                    <span class="text-sm text-[color:var(--text-muted)]" title="Requires Attendance entity">Coming soon</span>
+                </div>
+
+                <div class="mt-5 grid grid-cols-3 gap-3">
+                    <div class="bg-lagoon/25 p-4">
+                        <p>Present</p>
+                        <p class="text-2xl font-semibold">@stats.PresentToday</p>
+                    </div>
+                    <div class="bg-guava/30 p-4">
+                        <p>Absent</p>
+                        <p class="text-2xl font-semibold">@stats.AbsentToday</p>
+                    </div>
+                    <div class="bg-butter/30 p-4">
+                        <p>Late</p>
+                        <p class="text-2xl font-semibold">@stats.LateToday</p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="border border-seabreeze bg-white p-5">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <h2 class="text-lg font-semibold">Section Overview</h2>
+                    <a href="sections" class="text-sm underline">
+                        View All Sections →
+                    </a>
+                </div>
+
+                @if (topSections.Count == 0)
+                {
+                    <p class="mt-5 text-[color:var(--text-muted)]">No sections yet.</p>
+                }
+                else
+                {
+                    <div class="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                        @foreach (var section in topSections)
+                        {
+                            <div class="bg-lagoon/25 p-4">
+                                <p class="font-semibold">@section.GradeLevelName - @section.Name</p>
+                                <p>@section.LearnerCount learners</p>
+                                @if (!string.IsNullOrEmpty(section.AdviserName))
+                                {
+                                    <p class="text-sm">Adviser: @section.AdviserName</p>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+            </section>
         </div>
-    </section>
+
+        <section class="border border-seabreeze bg-white p-5">
+            <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <h2 class="text-lg font-semibold">Recent Learner Activity</h2>
+                <a href="learners" class="text-sm text-odyssey">View All Learners →</a>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full min-w-[540px] text-left text-sm">
+                    <thead class="bg-seabreeze">
+                        <tr>
+                            <th scope="col" class="px-4 py-3">Learner</th>
+                            <th scope="col" class="px-4 py-3">Activity</th>
+                            <th scope="col" class="px-4 py-3">Date &amp; Time</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (stats.RecentActivities.Count == 0)
+                        {
+                            <tr>
+                                <td colspan="3" class="px-4 py-8 text-center text-[color:var(--text-muted)]">
+                                    No recent activity.
+                                </td>
+                            </tr>
+                        }
+                        else
+                        {
+                            @foreach (var activity in stats.RecentActivities)
+                            {
+                                <tr class="border-b border-seabreeze">
+                                    <td class="px-4 py-3 font-semibold">@activity.LearnerName</td>
+                                    <td class="px-4 py-3">@activity.Activity</td>
+                                    <td class="px-4 py-3">@activity.Timestamp</td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    }
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div role="alert" class="border border-sangria/30 bg-sangria/10 p-4 text-sangria">
+            @errorMessage
+        </div>
+    }
 </div>
+
+@code {
+    private DashboardStats? stats;
+    private List<SectionSummary> topSections = [];
+    private bool isLoading = true;
+    private string errorMessage = "";
+
+    private static readonly Guid CurrentInstitutionId =
+        Guid.Parse("00000000-0000-0000-0000-000000000001");
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            stats = await LearnerService.GetDashboardStatsAsync(CurrentInstitutionId);
+
+            // Load top 3 sections for the overview panel
+            var sectionResult = await SectionService.GetSectionsAsync(new SectionFilter(
+                InstitutionId: CurrentInstitutionId,
+                SearchText: "",
+                GradeLevelId: null,
+                AdviserName: null,
+                Status: "Active"));
+
+            topSections = sectionResult.Items.Take(3).ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to load dashboard");
+            errorMessage = "Failed to load dashboard. Please try again.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}

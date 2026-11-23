@@ -1,6 +1,7 @@
 using SchoolManagementSystem.Components;
 using Microsoft.EntityFrameworkCore;
 using SchoolManagementSystem.Data;
+using SchoolManagementSystem.Modules.Enrollment.Application;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,6 +13,14 @@ var connectionString =
 
 builder.Services.AddDbContextFactory<SchoolDbContext>(options =>
     options.UseNpgsql(connectionString));
+
+// Register application services.
+// Scoped = one instance per Blazor circuit (user session).
+// LearnerService is stateless and creates its own DbContext per operation
+// via the factory, so scoped lifetime is safe — no shared mutable state.
+builder.Services.AddScoped<SchoolManagementSystem.Modules.Academics.Application.SchoolInfoService>();
+builder.Services.AddScoped<ILearnerService, LearnerService>();
+builder.Services.AddScoped<ISectionService, SectionService>();
 
 // Add services to the container.
 builder.Services.AddRazorComponents()

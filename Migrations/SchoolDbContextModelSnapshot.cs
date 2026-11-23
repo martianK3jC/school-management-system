@@ -108,6 +108,56 @@ namespace SchoolManagementSystem.Migrations
                     b.HasIndex("InstitutionId");
 
                     b.ToTable("GradeLevels", "school");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("a0000000-0000-0000-0000-000000000001"),
+                            Identifier = "G1",
+                            InstitutionId = new Guid("00000000-0000-0000-0000-000000000001"),
+                            Name = "Grade 1",
+                            Version = 1L
+                        },
+                        new
+                        {
+                            Id = new Guid("a0000000-0000-0000-0000-000000000002"),
+                            Identifier = "G2",
+                            InstitutionId = new Guid("00000000-0000-0000-0000-000000000001"),
+                            Name = "Grade 2",
+                            Version = 1L
+                        },
+                        new
+                        {
+                            Id = new Guid("a0000000-0000-0000-0000-000000000003"),
+                            Identifier = "G3",
+                            InstitutionId = new Guid("00000000-0000-0000-0000-000000000001"),
+                            Name = "Grade 3",
+                            Version = 1L
+                        },
+                        new
+                        {
+                            Id = new Guid("a0000000-0000-0000-0000-000000000004"),
+                            Identifier = "G4",
+                            InstitutionId = new Guid("00000000-0000-0000-0000-000000000001"),
+                            Name = "Grade 4",
+                            Version = 1L
+                        },
+                        new
+                        {
+                            Id = new Guid("a0000000-0000-0000-0000-000000000005"),
+                            Identifier = "G5",
+                            InstitutionId = new Guid("00000000-0000-0000-0000-000000000001"),
+                            Name = "Grade 5",
+                            Version = 1L
+                        },
+                        new
+                        {
+                            Id = new Guid("a0000000-0000-0000-0000-000000000006"),
+                            Identifier = "G6",
+                            InstitutionId = new Guid("00000000-0000-0000-0000-000000000001"),
+                            Name = "Grade 6",
+                            Version = 1L
+                        });
                 });
 
             modelBuilder.Entity("SchoolManagementSystem.Modules.Academics.Domain.Institution", b =>
@@ -126,6 +176,149 @@ namespace SchoolManagementSystem.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Institutions", "school");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("00000000-0000-0000-0000-000000000001"),
+                            DisplayName = "Sample School",
+                            Version = 1L
+                        });
+                });
+
+            modelBuilder.Entity("SchoolManagementSystem.Modules.Enrollment.Domain.Learner", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly>("BirthDate")
+                        .HasColumnType("date");
+
+                    b.Property<DateTimeOffset?>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("FirstName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("GradeLevelId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("GuardianContact")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("GuardianName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("InstitutionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("LastName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Lrn")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("MiddleName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("SectionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("SectionName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Sex")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GradeLevelId");
+
+                    b.HasIndex("SectionId");
+
+                    b.HasIndex("InstitutionId", "Lrn")
+                        .IsUnique();
+
+                    b.ToTable("Learners", "school", t =>
+                        {
+                            t.HasCheckConstraint("CK_Learners_BirthDate", "\"BirthDate\" > DATE '0001-01-01' AND \"BirthDate\" <= CURRENT_DATE");
+
+                            t.HasCheckConstraint("CK_Learners_Guardian", "length(btrim(\"GuardianName\")) <= 200 AND length(btrim(\"GuardianContact\")) <= 50");
+
+                            t.HasCheckConstraint("CK_Learners_Lrn", "\"Lrn\" ~ '^[0-9]{12}$'");
+
+                            t.HasCheckConstraint("CK_Learners_Names", "length(btrim(\"FirstName\")) BETWEEN 1 AND 100 AND length(btrim(\"LastName\")) BETWEEN 1 AND 100 AND length(btrim(\"MiddleName\")) <= 100");
+
+                            t.HasCheckConstraint("CK_Learners_Status", "\"Status\" IN ('Enrolled', 'Transferred', 'Withdrawn', 'Graduated') AND \"Sex\" IN ('Male', 'Female')");
+                        });
+                });
+
+            modelBuilder.Entity("SchoolManagementSystem.Modules.Enrollment.Domain.Section", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AdviserName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("GradeLevelId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("InstitutionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("MaxCapacity")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("RoomNumber")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GradeLevelId");
+
+                    b.HasIndex("InstitutionId", "GradeLevelId", "Name")
+                        .IsUnique();
+
+                    b.ToTable("Sections", "school", t =>
+                        {
+                            t.HasCheckConstraint("CK_Sections_Values", "length(btrim(\"Name\")) BETWEEN 1 AND 100 AND length(btrim(\"AdviserName\")) <= 200 AND length(btrim(\"RoomNumber\")) <= 100 AND \"MaxCapacity\" >= 0 AND \"Status\" IN ('Active', 'Inactive')");
+                        });
                 });
 
             modelBuilder.Entity("SchoolManagementSystem.Modules.Academics.Domain.AcademicYear", b =>
@@ -148,6 +341,43 @@ namespace SchoolManagementSystem.Migrations
 
             modelBuilder.Entity("SchoolManagementSystem.Modules.Academics.Domain.GradeLevel", b =>
                 {
+                    b.HasOne("SchoolManagementSystem.Modules.Academics.Domain.Institution", null)
+                        .WithMany()
+                        .HasForeignKey("InstitutionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SchoolManagementSystem.Modules.Enrollment.Domain.Learner", b =>
+                {
+                    b.HasOne("SchoolManagementSystem.Modules.Academics.Domain.GradeLevel", null)
+                        .WithMany()
+                        .HasForeignKey("GradeLevelId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SchoolManagementSystem.Modules.Academics.Domain.Institution", null)
+                        .WithMany()
+                        .HasForeignKey("InstitutionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SchoolManagementSystem.Modules.Enrollment.Domain.Section", "Section")
+                        .WithMany()
+                        .HasForeignKey("SectionId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Section");
+                });
+
+            modelBuilder.Entity("SchoolManagementSystem.Modules.Enrollment.Domain.Section", b =>
+                {
+                    b.HasOne("SchoolManagementSystem.Modules.Academics.Domain.GradeLevel", null)
+                        .WithMany()
+                        .HasForeignKey("GradeLevelId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("SchoolManagementSystem.Modules.Academics.Domain.Institution", null)
                         .WithMany()
                         .HasForeignKey("InstitutionId")

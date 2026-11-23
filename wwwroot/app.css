@@ -82,3 +82,22 @@ h1:focus {
 .blazor-error-boundary::after {
     content: "An error has occurred.";
 }
+/* Bound columns even when displaying old records that predate validation. */
+.learner-table { table-layout: fixed; }
+.learner-table th:first-child { width: 3rem; }
+.learner-table th:nth-child(2) { width: 23%; }
+.learner-table th:nth-child(3) { width: 18%; }
+.learner-table th:last-child { width: 7rem; }
+.learner-table td { overflow-wrap: anywhere; }
+
+.modal-shell {
+    margin: auto;
+    padding: 0;
+    border: 0;
+    width: 42rem;
+    max-width: calc(100% - 2rem);
+    max-height: 90vh;
+    background: transparent;
+    color: inherit;
+}
+.modal-shell::backdrop { background: rgb(0 0 0 / 50%); }
