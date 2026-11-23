@@ -1,4 +1,9 @@
 @page "/sections"
+@rendermode InteractiveServer
+@inject ISectionService SectionService
+@inject ILearnerService LearnerService
+@using System.ComponentModel.DataAnnotations
+@using SchoolManagementSystem.Modules.Enrollment.Application
 
 <PageTitle>Sections</PageTitle>
 
@@ -14,127 +19,660 @@
             <h1 class="text-[length:var(--text-display)] text-[color:var(--text-primary)]">
                 Sections
             </h1>
-            <p>Here's what's happening at your school today.</p>
+            <p>Manage class sections and view enrolled learners.</p>
         </div>
-        <button type="button" disabled
-                class="bg-odyssey px-4 py-3 text-white disabled:opacity-60">
+        <button type="button"
+                @onclick="OpenAddModal"
+                class="bg-odyssey px-4 py-3 text-white hover:bg-odyssey/90 focus-visible:outline-2 focus-visible:outline-odyssey focus-visible:outline-offset-2">
             + Add Section
         </button>
     </header>
 
-    <div class="flex flex-wrap items-center gap-3">
-        <select aria-label="Grade level"
-                class="border border-seabreeze bg-white px-3 py-3">
-            <option>All Grade Levels</option>
-        </select>
-
-        <input type="search"
-               aria-label="Search sections"
-               placeholder="Search section by name or adviser..."
-               class="min-w-0 flex-1 basis-64 border border-seabreeze bg-white px-3 py-3 focus:outline-2 focus:outline-odyssey" />
-
-        <select aria-label="Adviser"
-                class="border border-seabreeze bg-white px-3 py-3">
-            <option>All Advisers</option>
-        </select>
-    </div>
-
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        @for (var card = 1; card <= 6; card++)
-        {
-            <section class="border border-seabreeze bg-lagoon/20 p-5">
-                <div class="flex items-start justify-between gap-3">
-                    <div>
-                        <h2 class="text-2xl font-semibold">A</h2>
-                        <p class="font-semibold">Grade 1</p>
-                    </div>
-                    <span aria-hidden="true" class="text-2xl">⋮</span>
-                </div>
-
-                <p class="mt-3">31 learners</p>
-
-                <div class="mt-4 border-t border-seabreeze pt-4">
-                    <p class="font-semibold">Ms. Reyes</p>
-                    <p class="text-sm text-[color:var(--text-secondary)]">
-                        Class Adviser
-                    </p>
-                </div>
+    @if (isLoading)
+    {
+        <p class="py-8 text-center text-[color:var(--text-muted)]">Loading sections...</p>
+    }
+    else if (result is not null)
+    {
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <section class="bg-lagoon/30 p-5">
+                <h2 class="text-base font-semibold">Total Sections</h2>
+                <p class="mt-3 text-3xl font-semibold">@result.TotalCount</p>
             </section>
-        }
-    </div>
-
-    <section class="border border-seabreeze bg-white p-5">
-        <header class="flex flex-wrap items-center justify-between gap-4">
-            <div>
-                <h2 class="text-2xl font-semibold">Grade 1 - A</h2>
-                <p class="text-sm">31 learners | Adviser: Ms. Reyes</p>
-            </div>
-
-            <div class="flex flex-wrap gap-2">
-                <button type="button" disabled
-                        class="border border-seabreeze px-3 py-2 disabled:opacity-60">
-                    Take Attendance
-                </button>
-                <button type="button" disabled
-                        class="border border-seabreeze px-3 py-2 disabled:opacity-60">
-                    View Class Record
-                </button>
-            </div>
-        </header>
-
-        <div class="mt-6 flex flex-wrap gap-5 border-b border-seabreeze">
-            <span class="border-b-2 border-odyssey pb-3 font-semibold text-odyssey">
-                Learners
-            </span>
-            <span class="pb-3 text-[color:var(--text-muted)]">Attendance</span>
-            <span class="pb-3 text-[color:var(--text-muted)]">Class Record</span>
-            <span class="pb-3 text-[color:var(--text-muted)]">
-                Adviser Information
-            </span>
+            <section class="bg-moss/20 p-5">
+                <h2 class="text-base font-semibold">Active Sections</h2>
+                <p class="mt-3 text-3xl font-semibold">@result.ActiveCount</p>
+            </section>
         </div>
 
-        <div class="my-4 flex flex-wrap items-center justify-between gap-3">
+        <div class="flex flex-wrap items-center gap-3">
             <input type="search"
-                   aria-label="Search section learners"
-                   placeholder="Search learner name or LRN..."
-                   class="min-w-0 flex-1 basis-64 border border-seabreeze px-3 py-3 focus:outline-2 focus:outline-odyssey" />
+                   value="@searchText"
+                   @oninput="OnSearchInput"
+                   aria-label="Search sections"
+                   placeholder="Search by name or adviser..."
+                   class="min-w-0 flex-1 basis-64 border border-seabreeze bg-white px-3 py-3 focus:outline-2 focus:outline-odyssey" />
 
-            <button type="button" disabled
-                    class="bg-odyssey px-4 py-3 text-white disabled:opacity-60">
-                + Add Learner
+            <select @bind="selectedGradeLevelId"
+                    @bind:after="LoadDataAsync"
+                    aria-label="Grade level"
+                    class="border border-seabreeze bg-white px-3 py-3">
+                <option value="">All Grade Levels</option>
+                @foreach (var gl in gradeLevelOptions)
+                {
+                    <option value="@gl.Id">@gl.Name</option>
+                }
+            </select>
+
+            <select @bind="selectedAdviser"
+                    @bind:after="LoadDataAsync"
+                    aria-label="Adviser"
+                    class="border border-seabreeze bg-white px-3 py-3">
+                <option value="">All Advisers</option>
+                @foreach (var adviser in adviserOptions)
+                {
+                    <option value="@adviser">@adviser</option>
+                }
+            </select>
+
+            <button type="button"
+                    @onclick="ClearFilters"
+                    class="bg-odyssey px-4 py-3 text-white hover:bg-odyssey/90 focus-visible:outline-2 focus-visible:outline-odyssey focus-visible:outline-offset-2">
+                Clear Filters
             </button>
         </div>
 
-        <div class="overflow-x-auto">
-            <table class="w-full min-w-[800px] text-left text-sm">
-                <thead class="bg-seabreeze">
-                    <tr>
-                        <th scope="col" class="px-4 py-3">#</th>
-                        <th scope="col" class="px-4 py-3">Learner Name</th>
-                        <th scope="col" class="px-4 py-3">LRN</th>
-                        <th scope="col" class="px-4 py-3">Grade Level</th>
-                        <th scope="col" class="px-4 py-3">Section</th>
-                        <th scope="col" class="px-4 py-3">Status</th>
-                        <th scope="col" class="px-4 py-3">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @for (var row = 1; row <= 5; row++)
-                    {
-                        <tr class="border-b border-seabreeze">
-                            <td class="px-4 py-3">@row</td>
-                            <td class="px-4 py-3 font-semibold">Learner Name</td>
-                            <td class="px-4 py-3">12345678987</td>
-                            <td class="px-4 py-3">Grade Level</td>
-                            <td class="px-4 py-3">Section</td>
-                            <td class="px-4 py-3">
-                                <span class="bg-lagoon/25 px-2 py-1">Enrolled</span>
-                            </td>
-                            <td class="px-4 py-3 text-xs">[view] [edit] [more]</td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
+        @if (result.Items.Count == 0)
+        {
+            <p class="py-8 text-center text-[color:var(--text-muted)]">
+                No sections found. Try another search or clear the filters.
+            </p>
+        }
+        else
+        {
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                @foreach (var section in result.Items)
+                {
+                    <section @key="section.Id"
+                             class="cursor-pointer border border-seabreeze bg-lagoon/20 p-5 transition-colors hover:border-odyssey/50 @(selectedSectionId == section.Id ? "ring-2 ring-odyssey" : "")"
+                             @onclick="() => SelectSection(section.Id)">
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <h2 class="text-2xl font-semibold">@section.Name</h2>
+                                <p class="font-semibold">@section.GradeLevelName</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <button type="button"
+                                        @onclick="() => OpenEditModal(section.Id)"
+                                        @onclick:stopPropagation
+                                        class="text-odyssey hover:underline">
+                                    Edit
+                                </button>
+                                <button type="button"
+                                        @onclick="@(() => ConfirmDelete(section.Id, $"{section.GradeLevelName} - {section.Name}"))"
+                                        @onclick:stopPropagation
+                                        class="text-sangria hover:underline">
+                                    Delete
+                                </button>
+                            </div>
+                        </div>
+
+                        <p class="mt-3">@section.LearnerCount learners</p>
+
+                        @if (!string.IsNullOrEmpty(section.AdviserName))
+                        {
+                            <div class="mt-4 border-t border-seabreeze pt-4">
+                                <p class="font-semibold">@section.AdviserName</p>
+                                <p class="text-sm text-[color:var(--text-secondary)]">Class Adviser</p>
+                            </div>
+                        }
+
+                        @if (section.Status != "Active")
+                        {
+                            <span class="mt-2 inline-block bg-guava/30 px-2 py-1 text-xs font-semibold">@section.Status</span>
+                        }
+                    </section>
+                }
+            </div>
+        }
+
+        <p role="status" class="text-sm">
+            Showing @result.TotalCount of @result.TotalCount section records.
+        </p>
+    }
+
+    @* Detail panel: shows learners for the selected section *@
+    @if (selectedSectionId is not null && selectedSectionSummary is not null)
+    {
+        <section class="border border-seabreeze bg-white p-5">
+            <header class="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-2xl font-semibold">@selectedSectionSummary.GradeLevelName - @selectedSectionSummary.Name</h2>
+                    <p class="text-sm">
+                        @selectedSectionSummary.LearnerCount learners
+                        @if (!string.IsNullOrEmpty(selectedSectionSummary.AdviserName))
+                        {
+                            <text> | Adviser: @selectedSectionSummary.AdviserName</text>
+                        }
+                    </p>
+                </div>
+
+                <div class="flex flex-wrap gap-2">
+                    <button type="button" disabled title="Requires Attendance entity"
+                            class="border border-seabreeze px-3 py-2 disabled:opacity-60">
+                        Take Attendance
+                    </button>
+                    <button type="button" disabled title="Requires Class Record entity"
+                            class="border border-seabreeze px-3 py-2 disabled:opacity-60">
+                        View Class Record
+                    </button>
+                </div>
+            </header>
+
+            <div class="mt-6 flex flex-wrap gap-5 border-b border-seabreeze">
+                <span class="border-b-2 border-odyssey pb-3 font-semibold text-odyssey">Learners</span>
+                <span class="pb-3 text-[color:var(--text-muted)]" title="Coming soon">Attendance</span>
+                <span class="pb-3 text-[color:var(--text-muted)]" title="Coming soon">Class Record</span>
+                <span class="pb-3 text-[color:var(--text-muted)]" title="Coming soon">Adviser Information</span>
+            </div>
+
+            @if (isLoadingLearners)
+            {
+                <p class="py-6 text-center text-[color:var(--text-muted)]">Loading learners...</p>
+            }
+            else if (sectionLearners is not null)
+            {
+                <div class="my-4 flex flex-wrap items-center justify-between gap-3">
+                    <p class="text-sm text-[color:var(--text-secondary)]">
+                        @sectionLearners.TotalCount learner(s) in this section
+                    </p>
+                    <a href="learners"
+                       class="bg-odyssey px-4 py-3 text-white hover:bg-odyssey/90 focus-visible:outline-2 focus-visible:outline-odyssey focus-visible:outline-offset-2">
+                        + Add Learner
+                    </a>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full min-w-[800px] text-left text-sm">
+                        <thead class="bg-seabreeze">
+                            <tr>
+                                <th scope="col" class="px-4 py-3">#</th>
+                                <th scope="col" class="px-4 py-3">Learner Name</th>
+                                <th scope="col" class="px-4 py-3">LRN</th>
+                                <th scope="col" class="px-4 py-3">Sex</th>
+                                <th scope="col" class="px-4 py-3">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (sectionLearners.Items.Count == 0)
+                            {
+                                <tr>
+                                    <td colspan="5" class="px-4 py-8 text-center">
+                                        No learners in this section yet.
+                                    </td>
+                                </tr>
+                            }
+                            else
+                            {
+                                var rowNum = 0;
+                                @foreach (var learner in sectionLearners.Items)
+                                {
+                                    rowNum++;
+                                    <tr class="border-b border-seabreeze">
+                                        <td class="px-4 py-3">@rowNum</td>
+                                        <td class="px-4 py-3 font-semibold">@learner.FullName</td>
+                                        <td class="px-4 py-3">@learner.Lrn</td>
+                                        <td class="px-4 py-3">@learner.Sex</td>
+                                        <td class="px-4 py-3">@learner.Status</td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </section>
+    }
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="border border-sangria/30 bg-sangria/10 p-4 text-sangria">
+            @errorMessage
         </div>
-    </section>
+    }
+
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="border border-palm/30 bg-palm/10 p-4 text-palm">
+            @successMessage
+        </div>
+    }
 </div>
+
+@* Add/Edit Section Modal *@
+@if (showFormModal)
+{
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" @onclick="CloseModal">
+        <div class="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-white p-6 shadow-xl"
+             @onclick:stopPropagation>
+            <h2 class="mb-4 text-xl font-semibold">
+                @(isEditMode ? "Edit Section" : "Add Section")
+            </h2>
+
+            <EditForm Model="formModel" OnValidSubmit="HandleFormSubmit">
+                <DataAnnotationsValidator />
+                <ValidationSummary class="mb-4 text-sm text-sangria" />
+
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div>
+                        <label class="mb-1 block text-sm font-medium">Section Name *</label>
+                        <InputText @bind-Value="formModel.Name"
+                                   class="w-full border border-seabreeze px-3 py-2 focus:outline-2 focus:outline-odyssey" />
+                        <ValidationMessage For="() => formModel.Name" />
+                    </div>
+                    <div>
+                        <label class="mb-1 block text-sm font-medium">Grade Level *</label>
+                        <select @bind="formModel.GradeLevelId"
+                                class="w-full border border-seabreeze px-3 py-2 focus:outline-2 focus:outline-odyssey">
+                            <option value="@Guid.Empty">Select...</option>
+                            @foreach (var gl in gradeLevelOptions)
+                            {
+                                <option value="@gl.Id">@gl.Name</option>
+                            }
+                        </select>
+                        @if (formModel.GradeLevelId == Guid.Empty)
+                        {
+                            <span class="text-sm text-sangria">Grade level is required.</span>
+                        }
+                    </div>
+                    <div>
+                        <label class="mb-1 block text-sm font-medium">Adviser Name</label>
+                        <InputText @bind-Value="formModel.AdviserName"
+                                   class="w-full border border-seabreeze px-3 py-2 focus:outline-2 focus:outline-odyssey" />
+                    </div>
+                    <div>
+                        <label class="mb-1 block text-sm font-medium">Room Number</label>
+                        <InputText @bind-Value="formModel.RoomNumber"
+                                   class="w-full border border-seabreeze px-3 py-2 focus:outline-2 focus:outline-odyssey" />
+                    </div>
+                    <div>
+                        <label class="mb-1 block text-sm font-medium">Max Capacity</label>
+                        <InputNumber @bind-Value="formModel.MaxCapacity"
+                                     class="w-full border border-seabreeze px-3 py-2 focus:outline-2 focus:outline-odyssey" />
+                    </div>
+                    @if (isEditMode)
+                    {
+                        <div>
+                            <label class="mb-1 block text-sm font-medium">Status</label>
+                            <InputSelect @bind-Value="editStatus"
+                                         class="w-full border border-seabreeze px-3 py-2 focus:outline-2 focus:outline-odyssey">
+                                <option value="Active">Active</option>
+                                <option value="Inactive">Inactive</option>
+                            </InputSelect>
+                        </div>
+                    }
+                </div>
+
+                <div class="mt-6 flex justify-end gap-3">
+                    <button type="button"
+                            @onclick="CloseModal"
+                            class="border border-seabreeze px-4 py-2 hover:bg-seabreeze/50">
+                        Cancel
+                    </button>
+                    <button type="submit"
+                            disabled="@isSubmitting"
+                            class="bg-odyssey px-4 py-2 text-white hover:bg-odyssey/90 disabled:opacity-60">
+                        @(isSubmitting ? "Saving..." : (isEditMode ? "Update" : "Add"))
+                    </button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+}
+
+@* Delete Confirmation Modal *@
+@if (showDeleteConfirm)
+{
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" @onclick="CancelDelete">
+        <div class="w-full max-w-md bg-white p-6 shadow-xl" @onclick:stopPropagation>
+            <h2 class="mb-2 text-lg font-semibold text-sangria">Confirm Delete</h2>
+            <p class="mb-4">Are you sure you want to delete <strong>@deleteTargetName</strong>? This cannot be undone.</p>
+            <div class="flex justify-end gap-3">
+                <button type="button"
+                        @onclick="CancelDelete"
+                        class="border border-seabreeze px-4 py-2 hover:bg-seabreeze/50">
+                    Cancel
+                </button>
+                <button type="button"
+                        @onclick="ExecuteDelete"
+                        disabled="@isSubmitting"
+                        class="bg-sangria px-4 py-2 text-white hover:bg-sangria/90 disabled:opacity-60">
+                    @(isSubmitting ? "Deleting..." : "Delete")
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private SectionListResult? result;
+    private List<GradeLevelOption> gradeLevelOptions = [];
+    private List<string> adviserOptions = [];
+    private bool isLoading = true;
+    private bool isSubmitting;
+    private string errorMessage = "";
+    private string successMessage = "";
+
+    private string searchText = "";
+    private Guid? selectedGradeLevelId;
+    private string selectedAdviser = "";
+
+    private CancellationTokenSource? searchCts;
+
+    // Form modal state
+    private bool showFormModal;
+    private bool isEditMode;
+    private SectionFormModel formModel = new();
+    private string editStatus = "Active";
+    private long editVersion;
+
+    // Delete confirmation state
+    private bool showDeleteConfirm;
+    private Guid deleteTargetId;
+    private string deleteTargetName = "";
+
+    // Detail panel state
+    private Guid? selectedSectionId;
+    private SectionSummary? selectedSectionSummary;
+    private LearnerListResult? sectionLearners;
+    private bool isLoadingLearners;
+
+    private static readonly Guid CurrentInstitutionId =
+        Guid.Parse("00000000-0000-0000-0000-000000000001");
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDropdownsAsync();
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDropdownsAsync()
+    {
+        try
+        {
+            gradeLevelOptions = await LearnerService.GetGradeLevelOptionsAsync(CurrentInstitutionId);
+            adviserOptions = await SectionService.GetAdviserNamesAsync(CurrentInstitutionId);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to load dropdown options: {ex.Message}";
+        }
+    }
+
+    private async Task LoadDataAsync()
+    {
+        isLoading = true;
+        errorMessage = "";
+        successMessage = "";
+
+        try
+        {
+            var filter = new SectionFilter(
+                InstitutionId: CurrentInstitutionId,
+                SearchText: searchText,
+                GradeLevelId: selectedGradeLevelId,
+                AdviserName: string.IsNullOrWhiteSpace(selectedAdviser) ? null : selectedAdviser,
+                Status: null);
+
+            result = await SectionService.GetSectionsAsync(filter);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to load sections: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task OnSearchInput(ChangeEventArgs e)
+    {
+        searchText = e.Value?.ToString() ?? "";
+
+        searchCts?.Cancel();
+        searchCts = new CancellationTokenSource();
+        var token = searchCts.Token;
+
+        try
+        {
+            await Task.Delay(300, token);
+
+            if (!token.IsCancellationRequested)
+            {
+                await LoadDataAsync();
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+    }
+
+    private async Task ClearFilters()
+    {
+        searchText = "";
+        selectedGradeLevelId = null;
+        selectedAdviser = "";
+        await LoadDataAsync();
+    }
+
+    private async Task SelectSection(Guid sectionId)
+    {
+        selectedSectionId = sectionId;
+        selectedSectionSummary = result?.Items.FirstOrDefault(s => s.Id == sectionId);
+        isLoadingLearners = true;
+
+        try
+        {
+            var filter = new LearnerFilter(
+                InstitutionId: CurrentInstitutionId,
+                SearchText: "",
+                GradeLevelId: null,
+                SectionName: selectedSectionSummary?.Name,
+                Status: null);
+
+            sectionLearners = await LearnerService.GetLearnersAsync(filter);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to load section learners: {ex.Message}";
+        }
+        finally
+        {
+            isLoadingLearners = false;
+        }
+    }
+
+    private void OpenAddModal()
+    {
+        isEditMode = false;
+        formModel = new SectionFormModel();
+        editStatus = "Active";
+        editVersion = 0;
+        errorMessage = "";
+        successMessage = "";
+        showFormModal = true;
+    }
+
+    private async Task OpenEditModal(Guid sectionId)
+    {
+        errorMessage = "";
+        successMessage = "";
+
+        try
+        {
+            var summary = await SectionService.GetByIdAsync(sectionId);
+            if (summary is null)
+            {
+                errorMessage = "Section not found. It may have been deleted.";
+                return;
+            }
+
+            isEditMode = true;
+            formModel = new SectionFormModel
+            {
+                Id = summary.Id,
+                Name = summary.Name,
+                AdviserName = summary.AdviserName,
+                RoomNumber = summary.RoomNumber
+            };
+            editStatus = summary.Status;
+            // Version is not on SectionSummary — we'd need a detail DTO for full
+            // concurrency support. For now, use 1 as placeholder (same limitation
+            // the original Learner edit had before Phase 1 fixed it).
+            editVersion = 1;
+
+            var matchingGl = gradeLevelOptions.FirstOrDefault(g => g.Name == summary.GradeLevelName);
+            formModel.GradeLevelId = matchingGl?.Id ?? Guid.Empty;
+
+            showFormModal = true;
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to load section details: {ex.Message}";
+        }
+    }
+
+    private void CloseModal()
+    {
+        showFormModal = false;
+        errorMessage = "";
+    }
+
+    private async Task HandleFormSubmit()
+    {
+        if (formModel.GradeLevelId == Guid.Empty)
+        {
+            errorMessage = "Please select a grade level.";
+            return;
+        }
+
+        isSubmitting = true;
+        errorMessage = "";
+
+        try
+        {
+            if (isEditMode)
+            {
+                var request = new UpdateSectionRequest(
+                    Id: formModel.Id,
+                    GradeLevelId: formModel.GradeLevelId,
+                    Name: formModel.Name,
+                    AdviserName: formModel.AdviserName,
+                    RoomNumber: formModel.RoomNumber,
+                    MaxCapacity: formModel.MaxCapacity,
+                    Status: editStatus,
+                    Version: editVersion);
+
+                await SectionService.UpdateAsync(request);
+                successMessage = "Section updated successfully.";
+            }
+            else
+            {
+                var request = new CreateSectionRequest(
+                    InstitutionId: CurrentInstitutionId,
+                    GradeLevelId: formModel.GradeLevelId,
+                    Name: formModel.Name,
+                    AdviserName: formModel.AdviserName,
+                    RoomNumber: formModel.RoomNumber,
+                    MaxCapacity: formModel.MaxCapacity);
+
+                await SectionService.CreateAsync(request);
+                successMessage = "Section added successfully.";
+            }
+
+            showFormModal = false;
+            await LoadDataAsync();
+            await LoadDropdownsAsync();
+        }
+        catch (InvalidOperationException ex)
+        {
+            errorMessage = ex.Message;
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"An unexpected error occurred: {ex.Message}";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private void ConfirmDelete(Guid id, string name)
+    {
+        deleteTargetId = id;
+        deleteTargetName = name;
+        showDeleteConfirm = true;
+        errorMessage = "";
+        successMessage = "";
+    }
+
+    private void CancelDelete()
+    {
+        showDeleteConfirm = false;
+    }
+
+    private async Task ExecuteDelete()
+    {
+        isSubmitting = true;
+        errorMessage = "";
+
+        try
+        {
+            await SectionService.DeleteAsync(deleteTargetId);
+            successMessage = $"{deleteTargetName} has been deleted.";
+            showDeleteConfirm = false;
+
+            // If the deleted section was selected in the detail panel, clear it
+            if (selectedSectionId == deleteTargetId)
+            {
+                selectedSectionId = null;
+                selectedSectionSummary = null;
+                sectionLearners = null;
+            }
+
+            await LoadDataAsync();
+            await LoadDropdownsAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to delete section: {ex.Message}";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    /// <summary>
+    /// Mutable form model for the section add/edit modal. Uses a class (not a record)
+    /// because EditForm requires mutable properties with setters for two-way binding.
+    /// Validation attributes live here (UI-specific), not on DTOs (service contracts).
+    /// </summary>
+    private class SectionFormModel
+    {
+        public Guid Id { get; set; }
+
+        [Required(ErrorMessage = "Section name is required.")]
+        public string Name { get; set; } = "";
+
+        public Guid GradeLevelId { get; set; }
+
+        public string AdviserName { get; set; } = "";
+
+        public string RoomNumber { get; set; } = "";
+
+        public int MaxCapacity { get; set; }
+    }
+}
